@@ -5,6 +5,7 @@ For details, see [**the paper**](https://arxiv.org/abs/2303.15435) (or go to ICC
 
 [[`Webpage`](https://pierrefdz.github.io/publications/stablesignature/)]
 [[`arXiv`](https://arxiv.org/abs/2303.15435)]
+[[`Blog`](https://ai.meta.com/blog/stable-signature-watermarking-generative-ai/)]
 
 ## Setup
 
