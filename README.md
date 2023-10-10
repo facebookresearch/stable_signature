@@ -37,13 +37,19 @@ All you need is around 500 images for training (preferably over 256x256).
 
 The watermark extractor model can be downloaded in the following links.
 The `.pth` file has not been whitened, while the `.torchscript.pt` file has been and can be used without any further processing. 
-
 We additionally provide another extractor model, which has been trained with blur and rotations and has better robustness to that kind of attacks, at the cost of a slightly lower image quality (you might need to adjust the perceptual loss weight at your convenience).
 
 | Model | Checkpoint | Torch-Script |
 | --- | --- | --- |
 | Extractor | [dec_48b.pth](https://dl.fbaipublicfiles.com/ssl_watermarking/dec_48b.pth) | [dec_48b_whit.torchscript.pt](https://dl.fbaipublicfiles.com/ssl_watermarking/dec_48b_whit.torchscript.pt)  |
 | Other | [other_dec_48b_whit.pth](https://dl.fbaipublicfiles.com/ssl_watermarking/other_dec_48b.pth) | [other_dec_48b_whit.torchscript.pt](https://dl.fbaipublicfiles.com/ssl_watermarking/dec_48b_whit.torchscript.pt) |
+
+The following code automatically downloads the models and put them in the `models` folder:
+```cmd
+mkdir models
+wget https://dl.fbaipublicfiles.com/ssl_watermarking/dec_48b_whit.torchscript.pt -P models/
+wget https://dl.fbaipublicfiles.com/ssl_watermarking/other_dec_48b_whit.torchscript.pt -P models/
+```
 
 Code to train the watermark models is available in the folder called `hidden/`.
 
@@ -76,11 +82,11 @@ Please see [hidden/README.md](https://github.com/facebookresearch/stable_signatu
 ### Fine-tune LDM decoder
 
 ```
-python finetune_ldm_decoder.py --num_keys 1
-    --ldm_config path/to/ldm/config.yaml
-    --ldm_ckpt path/to/ldm/ckpt.pth
-    --msg_decoder_path path/to/msg/decoder/ckpt.torchscript.pt
-    --train_dir path/to/train/dir
+python finetune_ldm_decoder.py --num_keys 1 \
+    --ldm_config path/to/ldm/config.yaml \
+    --ldm_ckpt path/to/ldm/ckpt.pth \
+    --msg_decoder_path path/to/msg/decoder/ckpt.torchscript.pt \
+    --train_dir path/to/train/dir \
     --val_dir path/to/val/dir
 ```
 
@@ -108,10 +114,26 @@ You should also comment the lines that add the post-hoc watermark of SD: `img = 
 For instance with: [WM weights of SD2 decoder](https://dl.fbaipublicfiles.com/ssl_watermarking/sd2_decoder.pth), the weights obtained after running [this command](https://justpaste.it/ae93f). In this case, the state dict only contains the 'ldm_decoder' key, so you only need to load with `state_dict = torch.load(path/to/ckpt.pth)`
 
 
-
-### Decode
+### Decode and Evaluate
 
 The `decode.ipynb` notebook contains a full example of the decoding and associated statistical test.
+
+The `run_eval.py` script can be used to get the robustness and quality metrics on a folder of images.
+For instance:
+```
+python run_eval.py --eval_imgs False --eval_bits True \
+    --img_dir path/to/imgs_w \
+    --key_str '111010110101000001010111010011010100010000100111'
+```
+will return a csv file containing bit accuracy for different attacks applied before decoding.
+
+```
+python run_eval.py --eval_imgs True --eval_bits False \
+    --img_dir path/to/imgs_w --img_dir_nw path/to/imgs_nw 
+```
+will return a csv file containing image metrics (PSNR, SSIM, LPIPS) between watermarked (`_w`) and non-watermarked (`_nw`) images.
+
+
 
 ## Acknowledgements
 

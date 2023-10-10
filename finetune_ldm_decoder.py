@@ -46,7 +46,7 @@ def get_parser():
     group = parser.add_argument_group('Model parameters')
     aa("--ldm_config", type=str, default="sd/stable-diffusion-v-1-4-original/v1-inference.yaml", help="Path to the configuration file for the LDM model") 
     aa("--ldm_ckpt", type=str, default="sd/stable-diffusion-v-1-4-original/sd-v1-4-full-ema.ckpt", help="Path to the checkpoint file for the LDM model") 
-    aa("--msg_decoder_path", type=str, default= "/checkpoint/pfz/watermarking/models/hidden/dec_48b_whit.torchscript.pt", help="Path to the hidden decoder for the watermarking model")
+    aa("--msg_decoder_path", type=str, default= "models/hidden/dec_48b_whit.torchscript.pt", help="Path to the hidden decoder for the watermarking model")
     aa("--num_bits", type=int, default=48, help="Number of bits in the watermark")
     aa("--redundancy", type=int, default=1, help="Number of times the watermark is repeated to increase robustness")
     aa("--decoder_depth", type=int, default=8, help="Depth of the decoder in the watermarking model")

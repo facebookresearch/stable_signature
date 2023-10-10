@@ -176,11 +176,12 @@ def main(params):
         print(f"Linf: {linf_mean:.4f}±{linf_std:.4f} [{linf_min:.4f}, {linf_max:.4f}]")
         print(f"LPIPS: {lpips_mean:.4f}±{lpips_std:.4f} [{lpips_min:.4f}, {lpips_max:.4f}]")
 
-        print(f'>>> Computing image distribution stats...')
-        fid = cached_fid(params.img_dir, params.img_dir_fid)
-        print(f"FID watermark : {fid:.4f}")
-        fid_nw = cached_fid(params.img_dir_nw, params.img_dir_fid)
-        print(f"FID vanilla   : {fid_nw:.4f}")
+        if params.img_dir_fid is not None:
+            print(f'>>> Computing image distribution stats...')
+            fid = cached_fid(params.img_dir, params.img_dir_fid)
+            print(f"FID watermark : {fid:.4f}")
+            fid_nw = cached_fid(params.img_dir_nw, params.img_dir_fid)
+            print(f"FID vanilla   : {fid_nw:.4f}")
 
     if params.eval_bits:
 
@@ -246,12 +247,12 @@ def main(params):
                 'saturation_2': lambda x: utils_img.adjust_saturation(x, 2),
                 'sharpness_1p5': lambda x: utils_img.adjust_sharpness(x, 1.5),
                 'sharpness_2': lambda x: utils_img.adjust_sharpness(x, 2),
-                'resize_07': lambda x: utils_img.resize(x, 0.5),
+                'resize_05': lambda x: utils_img.resize(x, 0.5),
                 'resize_01': lambda x: utils_img.resize(x, 0.1),
                 'overlay_text': lambda x: utils_img.overlay_text(x, [76,111,114,101,109,32,73,112,115,117,109]),
                 'comb': lambda x: utils_img.jpeg_compress(utils_img.adjust_brightness(utils_img.center_crop(x, 0.5), 1.5), 80),
             }
-        if params.attack_mode == 'few':
+        elif params.attack_mode == 'few':
             attacks = {
                 'none': lambda x: x,
                 'crop_01': lambda x: utils_img.center_crop(x, 0.1),
@@ -260,6 +261,8 @@ def main(params):
                 'jpeg_50': lambda x: utils_img.jpeg_compress(x, 50),
                 'comb': lambda x: utils_img.jpeg_compress(utils_img.adjust_brightness(utils_img.center_crop(x, 0.5), 1.5), 80),
             }
+        else:
+            attacks = {'none': lambda x: x}
 
         if params.decode_only:
             log_stats = get_msgs(params.img_dir, msg_decoder, batch_size=params.batch_size, attacks=attacks)
@@ -287,14 +290,14 @@ def get_parser():
     group = parser.add_argument_group('Eval imgs')
     aa("--eval_imgs", type=utils.bool_inst, default=True, help="")
     aa("--img_dir_nw", type=str, default="/checkpoint/pfz/2023_logs/0104_aisign_sd_txt2img/_ldm_decoder_ckpt=0_config=0_ckpt=0/samples", help="")
-    aa("--img_dir_fid", type=str, default="/checkpoint/pfz/datasets/coco/val2014_512", help="")
+    aa("--img_dir_fid", type=str, default=None, help="")
     aa("--save_n_imgs", type=int, default=10)
 
     group = parser.add_argument_group('Eval bits')
     aa("--eval_bits", type=utils.bool_inst, default=True, help="")
     aa("--decode_only", type=utils.bool_inst, default=False, help="")
     aa("--key_str", type=str, default="111010110101000001010111010011010100010000100111")
-    aa("--msg_decoder_path", type=str, default= "/checkpoint/pfz/watermarking/models/hidden/dec_48b_whit.torchscript.pt")
+    aa("--msg_decoder_path", type=str, default= "models/dec_48b_whit.torchscript.pt")
     aa("--attack_mode", type=str, default= "all")
     aa("--num_bits", type=int, default=48)
     aa("--redundancy", type=int, default=1)
