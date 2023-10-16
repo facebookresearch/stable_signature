@@ -142,8 +142,7 @@ This code is based on the following repositories:
 - https://github.com/Stability-AI/stablediffusion
 - https://github.com/SteffenCzolbe/PerceptualSimilarity
 
-To train the watermark encoder/extractor, you can refer to the following repository https://github.com/ando-khachatryan/HiDDeN. 
-Changes were made from this codebase and will be made available soon.
+To train the watermark encoder/extractor, you can also refer to the following repository https://github.com/ando-khachatryan/HiDDeN. 
 
 ## License
 
