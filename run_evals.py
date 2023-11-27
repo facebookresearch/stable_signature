@@ -166,15 +166,12 @@ def main(params):
         ssims = img_df['ssim'].tolist()
         psnrs = img_df['psnr'].tolist()
         linfs = img_df['linf'].tolist()
-        lpips_ds = img_df['lpips'].tolist()
         ssim_mean, ssim_std, ssim_max, ssim_min = np.mean(ssims), np.std(ssims), np.max(ssims), np.min(ssims) 
         psnr_mean, psnr_std, psnr_max, psnr_min = np.mean(psnrs), np.std(psnrs), np.max(psnrs), np.min(psnrs)
         linf_mean, linf_std, linf_max, linf_min = np.mean(linfs), np.std(linfs), np.max(linfs), np.min(linfs)
-        lpips_mean, lpips_std, lpips_max, lpips_min = np.mean(lpips_ds), np.std(lpips_ds), np.max(lpips_ds), np.min(lpips_ds)
         print(f"SSIM: {ssim_mean:.4f}±{ssim_std:.4f} [{ssim_min:.4f}, {ssim_max:.4f}]")
         print(f"PSNR: {psnr_mean:.4f}±{psnr_std:.4f} [{psnr_min:.4f}, {psnr_max:.4f}]")
         print(f"Linf: {linf_mean:.4f}±{linf_std:.4f} [{linf_min:.4f}, {linf_max:.4f}]")
-        print(f"LPIPS: {lpips_mean:.4f}±{lpips_std:.4f} [{lpips_min:.4f}, {lpips_max:.4f}]")
 
         if params.img_dir_fid is not None:
             print(f'>>> Computing image distribution stats...')
