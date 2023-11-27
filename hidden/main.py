@@ -60,8 +60,8 @@ def get_parser():
         group.add_argument(*args, **kwargs)
 
     group = parser.add_argument_group('Experiments parameters')
-    aa("--train_dir", type=str, default="/checkpoint/pfz/watermarking/data/train_coco_10k_orig/0")
-    aa("--val_dir", type=str, default="/checkpoint/pfz/watermarking/data/coco_1k_orig/0")
+    aa("--train_dir", type=str, default="coco/train")
+    aa("--val_dir", type=str, default="coco/val")
     aa("--output_dir", type=str, default="output/", help="Output directory for logs and images (Default: /output)")
 
     group = parser.add_argument_group('Marking parameters')
@@ -335,8 +335,6 @@ def train_one_epoch(encoder_decoder: models.EncoderDecoder, loader, optimizer, s
     header = 'Train - Epoch: [{}/{}]'.format(epoch, params.epochs)
     metric_logger = utils.MetricLogger(delimiter="  ")
 
-    loss = 0
-    optimizer.zero_grad()
     for it, (imgs, _) in enumerate(metric_logger.log_every(loader, 10, header)):
         imgs = imgs.to(device, non_blocking=True) # b c h w
 
@@ -348,12 +346,12 @@ def train_one_epoch(encoder_decoder: models.EncoderDecoder, loader, optimizer, s
         loss_w = message_loss(fts, msgs, m=params.loss_margin, loss_type=params.loss_w_type) # b k -> 1
         loss_i = image_loss(imgs_w, imgs, loss_type=params.loss_i_type) # b c h w -> 1
         
-        loss += params.lambda_w*loss_w + params.lambda_i*loss_i
+        loss = params.lambda_w*loss_w + params.lambda_i*loss_i
 
         # gradient step
+        optimizer.zero_grad()
         loss.backward()
         optimizer.step()
-        optimizer.zero_grad()
 
         # img stats
         psnrs = utils_img.psnr(imgs_w, imgs) # b 1
@@ -367,7 +365,7 @@ def train_one_epoch(encoder_decoder: models.EncoderDecoder, loader, optimizer, s
         log_stats = {
             'loss_w': loss_w.item(),
             'loss_i': loss_i.item(),
-            'loss': (params.lambda_w*loss_w + params.lambda_i*loss_i).item(),
+            'loss': loss.item(),
             'psnr_avg': torch.mean(psnrs).item(),
             'lr': optimizer.param_groups[0]['lr'],
             'bit_acc_avg': torch.mean(bit_accs).item(),
