@@ -94,16 +94,22 @@ This code should generate:
 Reload weights of the LDM decoder in the Stable Diffusion pipeline:
 ```python
 from diffusers.models import AutoencoderKL
-from diffusers import StableDiffusionXLPipeline
+from diffusers import DiffusionPipeline
+import torch
 
 model = "CompVis/stable-diffusion-v1-4"
 
-pipe = StableDiffusionXLPipeline.from_pretrained(model, vae=vae)
+pipe = DiffusionPipeline.from_pretrained(model)
 
 state_dict = torch.load(path/to/ldm/checkpoint_000.pth)['ldm_decoder']
 msg = pipe.vae.load_state_dict(state_dict, strict=False)
 print(f"loaded LDM decoder state_dict with message\n{msg}")
 print("you should check that the decoder keys are correctly matched")
+
+device = torch.device('cuda')
+pipe.to(device)
+img = pipe("the cat drinks milk.").images[0]
+img.save('output/image.png')
 ```
 
 For instance with: [WM weights of SD2 decoder](https://dl.fbaipublicfiles.com/ssl_watermarking/sd2_decoder.pth), the weights obtained after running [this command](https://justpaste.it/ae93f). In this case, the state dict only contains the 'ldm_decoder' key, so you only need to load with `state_dict = torch.load(path/to/ckpt.pth)`
@@ -134,7 +140,6 @@ will return a csv file containing image metrics (PSNR, SSIM, LPIPS) between wate
 
 This code is based on the following repositories:
 
-- https://github.com/Stability-AI/stablediffusion
 - https://github.com/SteffenCzolbe/PerceptualSimilarity
 
 To train the watermark encoder/extractor, you can also refer to the following repository https://github.com/ando-khachatryan/HiDDeN. 
