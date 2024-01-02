@@ -27,8 +27,10 @@ import utils_model
 
 sys.path.append('src')
 from ldm.models.autoencoder import AutoencoderKL
-from ldm.models.diffusion.ddpm import LatentDiffusion
 from loss.loss_provider import LossProvider
+
+from diffusers import DiffusionPipeline
+from diffusers.models import AutoencoderKL
 
 device = torch.device('cuda') if torch.cuda.is_available() else torch.device('cpu')
 
@@ -44,8 +46,7 @@ def get_parser():
     aa("--val_dir", type=str, help="Path to the validation data directory", required=True)
 
     group = parser.add_argument_group('Model parameters')
-    aa("--ldm_config", type=str, default="sd/stable-diffusion-v-1-4-original/v1-inference.yaml", help="Path to the configuration file for the LDM model") 
-    aa("--ldm_ckpt", type=str, default="sd/stable-diffusion-v-1-4-original/sd-v1-4-full-ema.ckpt", help="Path to the checkpoint file for the LDM model") 
+    aa("--ldm_pipeline", type=str, default="CompVis/stable-diffusion-v1-4", help="Name of the LDM pipeline")
     aa("--msg_decoder_path", type=str, default= "models/hidden/dec_48b_whit.torchscript.pt", help="Path to the hidden decoder for the watermarking model")
     aa("--num_bits", type=int, default=48, help="Number of bits in the watermark")
     aa("--redundancy", type=int, default=1, help="Number of times the watermark is repeated to increase robustness")
@@ -96,13 +97,12 @@ def main(params):
         os.makedirs(imgs_dir, exist_ok=True)
 
     # Loads LDM auto-encoder models
-    print(f'>>> Building LDM model with config {params.ldm_config} and weights from {params.ldm_ckpt}...')
-    config = OmegaConf.load(f"{params.ldm_config}")
-    ldm_ae: LatentDiffusion = utils_model.load_model_from_config(config, params.ldm_ckpt)
-    ldm_ae: AutoencoderKL = ldm_ae.first_stage_model
+    print(f'>>> Building LDM model from pipeline {params.ldm_pipeline}...')
+    pipe = DiffusionPipeline.from_pretrained(params.ldm_pipeline)
+    ldm_ae: AutoencoderKL = pipe.vae
     ldm_ae.eval()
     ldm_ae.to(device)
-    
+
     # Loads hidden decoder
     print(f'>>> Building hidden decoder with weights from {params.msg_decoder_path}...')
     if 'torchscript' in params.msg_decoder_path: 
@@ -252,12 +252,14 @@ def train(data_loader: Iterable, optimizer: torch.optim.Optimizer, loss_w: Calla
         
         utils.adjust_learning_rate(optimizer, ii, params.steps, params.warmup_steps, base_lr)
         # encode images
-        imgs_z = ldm_ae.encode(imgs) # b c h w -> b z h/f w/f
-        imgs_z = imgs_z.mode()
+        with torch.no_grad():
+            imgs_z = ldm_ae.encode(imgs) # b c h w -> b z h/f w/f
+            imgs_z = imgs_z.latent_dist.mode()
 
         # decode latents with original and finetuned decoder
-        imgs_d0 = ldm_ae.decode(imgs_z) # b z h/f w/f -> b c h w
-        imgs_w = ldm_decoder.decode(imgs_z) # b z h/f w/f -> b c h w
+        with torch.no_grad():
+            imgs_d0 = ldm_ae.decode(imgs_z).sample # b z h/f w/f -> b c h w
+        imgs_w = ldm_decoder.decode(imgs_z).sample # b z h/f w/f -> b c h w
 
         # extract watermark
         decoded = msg_decoder(vqgan_to_imnet(imgs_w)) # b c h w -> b k
@@ -311,10 +313,10 @@ def val(data_loader: Iterable, ldm_ae: AutoencoderKL, ldm_decoder: AutoencoderKL
         imgs = imgs.to(device)
 
         imgs_z = ldm_ae.encode(imgs) # b c h w -> b z h/f w/f
-        imgs_z = imgs_z.mode()
+        imgs_z = imgs_z.latent_dist.mode()
 
-        imgs_d0 = ldm_ae.decode(imgs_z) # b z h/f w/f -> b c h w
-        imgs_w = ldm_decoder.decode(imgs_z) # b z h/f w/f -> b c h w
+        imgs_d0 = ldm_ae.decode(imgs_z).sample # b z h/f w/f -> b c h w
+        imgs_w = ldm_decoder.decode(imgs_z).sample # b z h/f w/f -> b c h w
         
         keys = key.repeat(imgs.shape[0], 1)
 

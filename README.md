@@ -54,14 +54,6 @@ wget https://dl.fbaipublicfiles.com/ssl_watermarking/other_dec_48b_whit.torchscr
 
 Code to train the watermark models is available in the folder called `hidden/`.
 
-#### Stable Diffusion models
-
-Create LDM configs and checkpoints from the [Hugging Face](https://huggingface.co/stabilityai) and [Stable Diffusion](https://github.com/Stability-AI/stablediffusion/tree/main/configs/stable-diffusion) repositories.
-The code should also work for Stable Diffusion v1 without any change. 
-For other models (like old LDMs or VQGANs), you may need to adapt the code to load the checkpoints.
-
-An example of watermarked weights is available at [WM weights of latent decoder](https://dl.fbaipublicfiles.com/ssl_watermarking/sd2_decoder.pth) (the key is the one present in the `decoding.ipynb` file).
-
 #### Perceptual Losses
 
 The perceptual losses are based on [this repo](https://github.com/SteffenCzolbe/PerceptualSimilarity/).
@@ -84,8 +76,6 @@ Please see [hidden/README.md](https://github.com/facebookresearch/stable_signatu
 
 ```
 python finetune_ldm_decoder.py --num_keys 1 \
-    --ldm_config path/to/ldm/config.yaml \
-    --ldm_ckpt path/to/ldm/ckpt.pth \
     --msg_decoder_path path/to/msg/decoder/ckpt.torchscript.pt \
     --train_dir path/to/train/dir \
     --val_dir path/to/val/dir
@@ -101,16 +91,20 @@ This code should generate:
 
 ### Generate
 
-Reload weights of the LDM decoder in the Stable Diffusion scripts by appending the following lines after loading the checkpoint 
-(for instance, [L220 in the SD repo](https://github.com/Stability-AI/stablediffusion/blob/main/scripts/txt2img.py#L220))
+Reload weights of the LDM decoder in the Stable Diffusion pipeline:
 ```python
+from diffusers.models import AutoencoderKL
+from diffusers import StableDiffusionXLPipeline
+
+model = "CompVis/stable-diffusion-v1-4"
+
+pipe = StableDiffusionXLPipeline.from_pretrained(model, vae=vae)
+
 state_dict = torch.load(path/to/ldm/checkpoint_000.pth)['ldm_decoder']
-msg = model.first_stage_model.load_state_dict(state_dict, strict=False)
+msg = pipe.vae.load_state_dict(state_dict, strict=False)
 print(f"loaded LDM decoder state_dict with message\n{msg}")
 print("you should check that the decoder keys are correctly matched")
 ```
-
-You should also comment the lines that add the post-hoc watermark of SD: `img = put_watermark(img, wm_encoder)`.
 
 For instance with: [WM weights of SD2 decoder](https://dl.fbaipublicfiles.com/ssl_watermarking/sd2_decoder.pth), the weights obtained after running [this command](https://justpaste.it/ae93f). In this case, the state dict only contains the 'ldm_decoder' key, so you only need to load with `state_dict = torch.load(path/to/ckpt.pth)`
 
@@ -119,17 +113,17 @@ For instance with: [WM weights of SD2 decoder](https://dl.fbaipublicfiles.com/ss
 
 The `decode.ipynb` notebook contains a full example of the decoding and associated statistical test.
 
-The `run_eval.py` script can be used to get the robustness and quality metrics on a folder of images.
+The `run_evals.py` script can be used to get the robustness and quality metrics on a folder of images.
 For instance:
 ```
-python run_eval.py --eval_imgs False --eval_bits True \
+python run_evals.py --eval_imgs False --eval_bits True \
     --img_dir path/to/imgs_w \
     --key_str '111010110101000001010111010011010100010000100111'
 ```
 will return a csv file containing bit accuracy for different attacks applied before decoding.
 
 ```
-python run_eval.py --eval_imgs True --eval_bits False \
+python run_evals.py --eval_imgs True --eval_bits False \
     --img_dir path/to/imgs_w --img_dir_nw path/to/imgs_nw 
 ```
 will return a csv file containing image metrics (PSNR, SSIM, LPIPS) between watermarked (`_w`) and non-watermarked (`_nw`) images.
