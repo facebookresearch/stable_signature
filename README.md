@@ -6,7 +6,7 @@ For details, see [**the paper**](https://arxiv.org/abs/2303.15435) (or go to ICC
 [[`Webpage`](https://pierrefdz.github.io/publications/stablesignature/)]
 [[`arXiv`](https://arxiv.org/abs/2303.15435)]
 [[`Blog`](https://ai.meta.com/blog/stable-signature-watermarking-generative-ai/)]
-[[`Demo (from Imatag)`](https://huggingface.co/spaces/imatag/stable-signature-bzh)]
+[[`Demo`](https://huggingface.co/spaces/imatag/stable-signature-bzh)]
 
 ## Setup
 
@@ -101,6 +101,8 @@ This code should generate:
 
 ### Generate
 
+#### With Stability AI codebase
+
 Reload weights of the LDM decoder in the Stable Diffusion scripts by appending the following lines after loading the checkpoint 
 (for instance, [L220 in the SD repo](https://github.com/Stability-AI/stablediffusion/blob/main/scripts/txt2img.py#L220))
 ```python
@@ -112,8 +114,44 @@ print("you should check that the decoder keys are correctly matched")
 
 You should also comment the lines that add the post-hoc watermark of SD: `img = put_watermark(img, wm_encoder)`.
 
-For instance with: [WM weights of SD2 decoder](https://dl.fbaipublicfiles.com/ssl_watermarking/sd2_decoder.pth), the weights obtained after running [this command](https://justpaste.it/ae93f). In this case, the state dict only contains the 'ldm_decoder' key, so you only need to load with `state_dict = torch.load(path/to/ckpt.pth)`
+[WM weights of SD2 decoder](https://dl.fbaipublicfiles.com/ssl_watermarking/sd2_decoder.pth). Weights obtained after running [this command](https://justpaste.it/ae93f). 
+In this case, the state dict only contains the 'ldm_decoder' key, so you only need to load with `state_dict = torch.load(path/to/ckpt.pth)`
 
+#### With Diffusers
+
+Here is a code snippet that could be used to reload the decoder with the Diffusers library (transformers==4.25.1, diffusers==0.25.1). (Still WIP, this might be updated in the future!)
+
+```python
+import torch 
+device = torch.device("cuda")
+
+from omegaconf import OmegaConf 
+from diffusers import StableDiffusionPipeline 
+from utils_model import load_model_from_config 
+
+ldm_config = "sd/stable-diffusion-2-1-base/v2-inference.yaml"
+ldm_ckpt = "sd/stable-diffusion-2-1-base/v2-1_512-ema-pruned.ckpt"
+
+print(f'>>> Building LDM model with config {ldm_config} and weights from {ldm_ckpt}...')
+config = OmegaConf.load(f"{ldm_config}")
+ldm_ae = load_model_from_config(config, ldm_ckpt)
+ldm_aef = ldm_ae.first_stage_model
+ldm_aef.eval()
+
+# loading the fine-tuned decoder weights
+state_dict = torch.load("sd2_decoder.pth")
+unexpected_keys = ldm_aef.load_state_dict(state_dict, strict=False)
+print(unexpected_keys)
+print("you should check that the decoder keys are correctly matched")
+
+# loading the pipeline, and replacing the decode function of the pipe
+model = "stabilityai/stable-diffusion-2"
+pipe = StableDiffusionPipeline.from_pretrained(model).to(device)
+pipe.vae.decode = (lambda x,  *args, **kwargs: ldm_aef.decode(x).unsqueeze(0))
+
+img = pipe("the cat drinks water.").images[0]
+img.save("cat.png")
+```
 
 ### Decode and Evaluate
 
