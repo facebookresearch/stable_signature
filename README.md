@@ -18,12 +18,17 @@ First, clone the repository locally and move inside the folder:
 git clone https://github.com/facebookresearch/stable_signature
 cd stable_signature
 ```
-To install the main dependencies, we recommand using conda, and install the remaining dependencies with pip:
+To install the main dependencies, we recommand using conda.
 [PyTorch](https://pytorch.org/) can be installed with:
 ```cmd
 conda install -c pytorch torchvision pytorch==1.12.0 cudatoolkit==11.3
+```
+
+Install the remaining dependencies with pip:
+```cmd
 pip install -r requirements.txt
 ```
+
 This codebase has been developed with python version 3.8, PyTorch version 1.12.0, CUDA 11.3.
 
 
