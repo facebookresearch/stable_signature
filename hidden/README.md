@@ -174,6 +174,7 @@ The resulting checkpoints have approximately the same performance as in the pape
 [`hidden_replicate.pth`](https://dl.fbaipublicfiles.com/ssl_watermarking/hidden_replicate.pth) - [`hidden_replicate_whit.torchscript.pth`](https://dl.fbaipublicfiles.com/ssl_watermarking/hidden_replicate_whit.torchscript.pt).
 (Robustness to JPEG is a bit worse, because the augmentation implementation differ a bit from the paper: this could be fixed by increasing the JPEG augmentation probability).
 
+:warning: The LR is rescaled with the world size (as done in many image classification repos). If you encounter an issue when running the experiment, you can try to make the LR and batch size match as close as possible the ones used in the above run.
 
 
 ## Citation
