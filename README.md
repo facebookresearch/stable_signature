@@ -126,6 +126,11 @@ In this case, the state dict only contains the 'ldm_decoder' key, so you only ne
 
 Here is a code snippet that could be used to reload the decoder with the Diffusers library (transformers==4.25.1, diffusers==0.25.1). (Still WIP, this might be updated in the future!)
 
+:warning: Make sure that no "decoder.*" keys are printed by `print(unexpected_keys)`, otherwise it means that the LDM decoder has not been loaded.
+If you load a checkpoint created from `finetune_ldm_decoder.py`, use `unexpected_keys = ldm_aef.load_state_dict(state_dict, strict=False)["ldm_decoder"]` instead.
+See [issue 29](https://github.com/facebookresearch/stable_signature/issues/29).
+
+
 ```python
 import torch 
 device = torch.device("cuda")
